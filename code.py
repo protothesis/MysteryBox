@@ -77,7 +77,6 @@ color_list = cycle_sequence([
 color_name = next(color_list)  
 active_color = None
 
-
 # -- range of random blinkies
 randmin = 3
 randmax = 10
@@ -90,9 +89,11 @@ oldreset = None
 blink_speed = 0.5
 initial_time = time.monotonic()  # defines starting time for blinkcheck()
 blinky_time = time.monotonic()  # set a time comparator for blinky()
+
+# !!! NEW SHIT TO DO
 blinkyNew_time = time.monotonic()
-
-
+blinklist_index = 0  # variable - current blink index
+random_pause = random.uniform(.05, .5)  # variable - current pause duration
 
 # ////  FUNCTIONS !!!
 def buttonpress():  # returns inverse of button press
@@ -121,6 +122,13 @@ def togglecheck():  # checks and sets the state of the toggle
             color_name = next(color_list)  # changes color of blinkers when toggle flips
         else:
             print("OFF")
+            clearPixels()
+            ''' 
+                NOTE!!!
+                I'd like this to not be in the toggle check function
+                but have it called elsewhere, but i cant seem to make it happen
+            '''
+        # return toggle.value  # this gives unexpected behavior
     else:
     	pass
     toggle_state = toggle.value
@@ -132,29 +140,68 @@ def blinklist():  # generate a pixel order list to be used as a nonblocking alte
     for x in range(pixelcount):
     	pix_order_list.append(random.randint(0, 9))
     	# pixloc = random.randint(0, 9)
-    print(pix_order_list)
+    #  print(pix_order_list)
+    return pix_order_list   # return the value of the list!
+
+blink_list = blinklist()
 
 def blinkyNew():  # WIP for the non blocking blinker generator... 
-	print("\n     blinkyNew() CALLED")
+    # print("\n     blinkyNew() CALLED")
+    global active_color
+    global color_name
 
-	blinklist()  # creates a new pixel order list
+    global blinkyNew_time
+    global random_pause
 
-	global blinkyNew_time
-	randomtime = 1
+    global blink_list
+    global blinklist_index
 
-	if current_time - blinkyNew_time > randomtime:
-		blinkyNew_time = current_time
-		# then do the thing...
+    active_color = color_swatches[color_name]
 
-		# !!!!!!
-		# !!!!!!
-		# this is where I run out of steam... 
-		# I may or may not be on the track... 
-		# thinking about iterating through the list...
-		# or creating a counter that goes up
-		# I may need to use cycle_sequence...???
-		# !!!!!!
-		# !!!!!!
+    # PSEUDO CODE NOTES!!!
+        # if time to do something
+            # toggle appropriate light
+            # increment current blink index
+            # change pause to new random duration
+            # if were at the end of list (remember index starts at 0, check length, etc)
+                # generate new list
+                # set blink index to 0
+
+    if current_time - blinkyNew_time > random_pause:
+        blinkyNew_time = current_time 
+
+        if cpx.pixels[blink_list[blinklist_index]] == active_color:  # If the color is the active color
+            cpx.pixels[blink_list[blinklist_index]] = BLACK  # set it black
+            color = "OFF"
+        else:
+            cpx.pixels[blink_list[blinklist_index]] = active_color  # otherwise set it to the active color
+            color = color_name 
+
+        print(
+        # "blink_list \n"
+        "index:", blinklist_index, "/", 
+        "value:", blink_list[blinklist_index], "/", 
+        "color:", color, "/",
+        "pause:", random_pause
+        )
+
+        blinklist_index += 1
+
+        random_pause = random.uniform(.05, .5)  # current pause duration
+
+        if blinklist_index >= len(blink_list):  # if we're at the end of the list
+            blink_list = blinklist()  # generate a new list
+
+            print()
+            print("blink_list:", blink_list)
+
+            blinklist_index = 0  # reset the index
+
+            neochange()  # change the solo neopixel
+            clearPixels()  # clear the CPX pixels
+
+    else:
+        pass
 
 def blinky():  # blinks the cpx pixels randomly
     print("\n    blinky() CALLED")
@@ -222,7 +269,12 @@ def blinky():  # blinks the cpx pixels randomly
 
     print("-- blinky times reset :", reset, "\n")
     pass
-    
+
+def clearPixels():  # reset pixels and set random brightness
+    cpx.pixels.fill(BLACK)  # clear any pixel color
+    Bright = random.uniform(.001, .2)
+    cpx.pixels.brightness = Bright
+  
 def neochange():  # sets random color and brightness for solo neopixel
     neo.brightness = random.random()
     rCol = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
@@ -256,16 +308,17 @@ def blinkcheck(speed):  # non blocking LED blinky
 # //// DO STUFF !!!
 while True:
     current_time = time.monotonic()
+
     presscheck()
     togglecheck()
 
     if toggle.value:
-        blinkcheck(blink_speed)
+        blinkcheck(random.uniform(.01, 1)) 
 
         if buttonpress():
             # print("Pressed")
             cpx.start_tone(random.randint(250,700))
-            blinklist()
+            # blinklist()
             redflare()
             pass
         else:
@@ -275,16 +328,18 @@ while True:
 
             inputReady()
     else:
-    	# blinkcheck(.25)  #led wont blink cause blinky is currently blocking...
-        cpx.red_led = False
-        neochange()
-        blinky()
+        blinkcheck(blink_speed)
+        # cpx.red_led = False
+
+        blinkyNew()
+        # blinky()
+
         pass
         
 
     # This little statement checks to see if reset has changed and changes the solo neopixel
-    if oldreset is None or reset != oldreset:
-        neochange()
-    oldreset = reset    
+    # if oldreset is None or reset != oldreset:
+    #     neochange()
+    # oldreset = reset    
 
     time.sleep(0.01)
