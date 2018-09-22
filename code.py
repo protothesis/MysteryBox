@@ -90,10 +90,10 @@ blink_speed = 0.5
 initial_time = time.monotonic()  # defines starting time for blinkcheck()
 blinky_time = time.monotonic()  # set a time comparator for blinky()
 
-# !!! NEW SHIT TO DO
-blinkyNew_time = time.monotonic()
-blinklist_index = 0  # variable - current blink index
-random_pause = random.uniform(.05, .5)  # variable - current pause duration
+# -- global vars for CPX pixel blinking
+blinkyNew_time = time.monotonic()  # set a time comparator for blinkyNew()
+blinklist_index = 0  # current blink index
+random_pause = random.uniform(.05, .5)  # current pause duration
 
 # ////  FUNCTIONS !!!
 def buttonpress():  # returns inverse of button press
@@ -269,18 +269,18 @@ def blinky():  # blinks the cpx pixels randomly
 
     print("-- blinky times reset :", reset, "\n")
     pass
-
-def clearPixels():  # reset pixels and set random brightness
-    cpx.pixels.fill(BLACK)  # clear any pixel color
-    Bright = random.uniform(.001, .2)
-    cpx.pixels.brightness = Bright
-  
+ 
 def neochange():  # sets random color and brightness for solo neopixel
     neo.brightness = random.random()
     rCol = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
     neo.fill(rCol)
 
-def inputReady():  # resets pixels to standard green
+def clearPixels():  # reset CPX pixels to OFF and set random brightness
+    cpx.pixels.fill(BLACK)  # clear any pixel color
+    Bright = random.uniform(.001, .2)
+    cpx.pixels.brightness = Bright
+ 
+def inputReady():  # resets CPX pixels to standard green
     cpx.pixels.brightness = .01
     cpx.pixels.fill(GREEN)
     neo.brightness = .1
@@ -291,7 +291,6 @@ def redflare():  # randomly changes brightness of all pixels
     print("Bright =", Bright)
     cpx.pixels.fill(RED)
     cpx.pixels.brightness = Bright
-    
     neo.brightness = Bright
     pass   
 
@@ -303,7 +302,7 @@ def blinkcheck(speed):  # non blocking LED blinky
         initial_time = current_time
         cpx.red_led = not cpx.red_led
 
-
+neochange()
 
 # //// DO STUFF !!!
 while True:
@@ -312,7 +311,7 @@ while True:
     presscheck()
     togglecheck()
 
-    if toggle.value:
+    if toggle.value:  # if toggle switch is ON
         blinkcheck(random.uniform(.01, 1)) 
 
         if buttonpress():
@@ -327,19 +326,19 @@ while True:
             # if you're holding the button when you flip the togle off
 
             inputReady()
-    else:
-        blinkcheck(blink_speed)
-        # cpx.red_led = False
 
+    else:  # else toggle switch is OFF
+        blinkcheck(blink_speed)
         blinkyNew()
         # blinky()
 
-        pass
-        
+        # /// NOTE
+        # the following code causes a memory error...
 
-    # This little statement checks to see if reset has changed and changes the solo neopixel
-    # if oldreset is None or reset != oldreset:
-    #     neochange()
-    # oldreset = reset    
+        # if buttonpress():
+        #     color_name = next(color_list)
+        #     print(color_name)
+        # else:
+        #     pass        
 
     time.sleep(0.01)
