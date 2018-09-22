@@ -1,7 +1,7 @@
 # This is the basic starting functionality of the mystery box prototype
 
-# ---- SETUP !!!
 
+# //// SETUP !!!
 import time
 import random
 
@@ -13,55 +13,52 @@ from adafruit_circuitplayground.express import cpx
 
 
 
+# ////  DECLARE VARIABLES !!!
 
-
-# ----  DECLARE VARIABLES !!!
-
-# // Set initial CPX pixel brightness
+# -- Set initial CPX pixel brightness
 cpx.pixels.brightness = .01
 
-# // setup the external neopixel 
+# -- setup the external neopixel 
 pixpin = board.A3
 numpix = 1
 neobright = 0.1
 neo = neopixel.NeoPixel(pixpin, numpix, brightness=neobright)
 
-# // the toggle switch
+# -- the toggle switch
 toggle = DigitalInOut(board.A6)
 toggle.direction = Direction.INPUT
 toggle_state = toggle.value 
 
-# // the silver button
+# -- the silver button
 button = DigitalInOut(board.A7)
 button.direction = Direction.INPUT
 button.pull = Pull.UP
 button_state = None
 
-# // Color Variables
+# -- Color Variables
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 BLACK = (0, 0, 0)
 
-# // range of random blinkies
+# -- range of random blinkies
 randmin = 3
 randmax = 10
 
-# // used to change values elsewhere based on the blinky function finishing
+# -- used to change values elsewhere based on the blinky function finishing
 reset = 0
 oldreset = None
 
-# // global vars for 'blinkcheck'
+# -- global vars for 'blinkcheck'
 blink_speed = 0.5
 initial_time = time.monotonic()  # defines starting time
 
 
 
-# ----  FUNCTIONS !!!
-
+# ////  FUNCTIONS !!!
 def buttonpress():  # returns inverse of button press
     return not button.value
-    # this is just to fold the code in sublime 
+    # ... this is just to fold the code in SublimeText
 
 def presscheck():  # checks and sets the state of the button
     global button_state
@@ -78,7 +75,6 @@ def presscheck():  # checks and sets the state of the button
 def togglecheck():  # checks and sets the state of the toggle
     # print("toggle checked")
     global toggle_state
-
     if toggle.value != toggle_state:
         print("toggle value :", toggle.value)
         if toggle.value:
@@ -146,21 +142,9 @@ def blinkcheck(speed):  # non blocking LED blinky
         initial_time = current_time
         cpx.red_led = not cpx.red_led
 
-# var for randomtime
-marked_time = time.monotonic()
-
-# def randomtime():
-#     random_pause = random.uniform(.5, 2)
-#     # global marked_time
-#     localtime = current_time
-
-#     if current_time - local_time > random_pause:
-#         # local_time = current_time
-#         print("random pause :", random_pause)
 
 
-# ---- DO STUFF !!!
-
+# //// DO STUFF !!!
 while True:
     current_time = time.monotonic()
 
