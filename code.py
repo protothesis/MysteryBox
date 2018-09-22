@@ -312,15 +312,71 @@ neochange()
 
 
 
+
+# /// NEW setup declarations
+def doPixelsOff():
+    cpx.pixels.brightness = 0
+    cpx.pixels.fill(BLACK) 
+
+def doModeSetup():
+    if mode == "green":
+        cpx.pixels.brightness = .01
+        cpx.pixels.fill(GREEN)
+    else:
+        doPixelsOff()
+
+mode = "green" if toggle.value else "blinky"
+doModeSetup()
+
+
 # //// DO STUFF !!!
 while True:
+    # print(mode)
+
+    # UPDATES
     current_time = time.monotonic()
+
+    previous_mode = mode
+    mode = "green" if toggle.value else "blinky"
+    mode_has_changed = previous_mode != mode
+
+
+    # COMMANDS
+    if mode_has_changed:
+        print(mode)
+        doModeSetup()
+
+    time.sleep(0.01)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # /// OLD LOOP FOR REFERENCE
+    # current_time = time.monotonic()
 
     # if togglecheck():
     #     if toggle.value:
+    #         # change the color
     #         print("it turned on")
     #     else:
     #         print("it turned OFF")
+    #         # clear pixels
+
 
     # if toggle.value:  # if toggle switch is ON
     #     blinkcheck(random.uniform(.01, 1)) 
@@ -335,10 +391,5 @@ while True:
     #     blinkcheck(blink_speed)
     #     blinkyNew()
 
-
-#  UPDATE/REFRESH the loop
-    # Theoretically, all of the operations below will prime the code for the next check
-    # keep "side effects" out of return operators
-    prev_toggle_state = toggle.value  # updates the toggle state for next pass
-    time.sleep(0.01)
-
+    # prev_toggle_state = toggle.value  # updates the toggle state for next pass
+    # time.sleep(0.01)
