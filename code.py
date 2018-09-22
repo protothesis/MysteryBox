@@ -27,7 +27,8 @@ neo = neopixel.NeoPixel(pixpin, numpix, brightness=neobright)
 # -- the toggle switch
 toggle = DigitalInOut(board.A6)
 toggle.direction = Direction.INPUT
-toggle_state = toggle.value 
+
+prev_toggle_state = toggle.value 
 
 # -- the silver button
 button = DigitalInOut(board.A7)
@@ -95,6 +96,7 @@ blinkyNew_time = time.monotonic()  # set a time comparator for blinkyNew()
 blinklist_index = 0  # current blink index
 random_pause = random.uniform(.05, .5)  # current pause duration
 
+
 # ////  FUNCTIONS !!!
 def buttonpress():  # returns inverse of button press
     return not button.value
@@ -113,25 +115,29 @@ def presscheck():  # checks and sets the state of the button
 
 def togglecheck():  # checks and sets the state of the toggle
     # print("toggle checked")
-    global toggle_state
+    global prev_toggle_state
     global color_name
-    if toggle.value != toggle_state:
-        print("toggle value :", toggle.value)
-        if toggle.value:
-            print("ON")
-            color_name = next(color_list)  # changes color of blinkers when toggle flips
-        else:
-            print("OFF")
-            clearPixels()
-            ''' 
-                NOTE!!!
-                I'd like this to not be in the toggle check function
-                but have it called elsewhere, but i cant seem to make it happen
-            '''
-        # return toggle.value  # this gives unexpected behavior
-    else:
-    	pass
-    toggle_state = toggle.value
+
+    # if toggle.value != prev_toggle_state:
+    #     # return True
+    #     print("toggle value :", toggle.value)
+    #     if toggle.value:
+    #         print("ON")
+    #         color_name = next(color_list)  # changes color of blinkers when toggle flips
+    #     else:
+    #         print("OFF")
+    #         clearPixels()
+    #         ''' 
+    #             NOTE!!!
+    #             I'd like this to not be in the toggle check function
+    #             but have it called elsewhere, but i cant seem to make it happen
+    #         '''
+    #     # return toggle.value  # this gives unexpected behavior
+    # else:
+    # 	pass
+    # prev_toggle_state = toggle.value
+
+    return prev_toggle_state != toggle.value
 
 def blinklist():  # generate a pixel order list to be used as a nonblocking alternative to blinky()
     pixelcount = random.randint(randmin, randmax) # pick a num of pixels to fuck with
@@ -304,41 +310,35 @@ def blinkcheck(speed):  # non blocking LED blinky
 
 neochange()
 
+
+
 # //// DO STUFF !!!
 while True:
     current_time = time.monotonic()
 
-    presscheck()
-    togglecheck()
+    # if togglecheck():
+    #     if toggle.value:
+    #         print("it turned on")
+    #     else:
+    #         print("it turned OFF")
 
-    if toggle.value:  # if toggle switch is ON
-        blinkcheck(random.uniform(.01, 1)) 
+    # if toggle.value:  # if toggle switch is ON
+    #     blinkcheck(random.uniform(.01, 1)) 
+    #     if buttonpress():
+    #         cpx.start_tone(random.randint(250,700))
+    #         redflare()
+    #         pass
+    #     else:
+    #         cpx.stop_tone()
+    #         inputReady()
+    # else:  # else toggle switch is OFF
+    #     blinkcheck(blink_speed)
+    #     blinkyNew()
 
-        if buttonpress():
-            # print("Pressed")
-            cpx.start_tone(random.randint(250,700))
-            # blinklist()
-            redflare()
-            pass
-        else:
-            cpx.stop_tone()
-            # there's a bug where the tone doesnt stop...
-            # if you're holding the button when you flip the togle off
 
-            inputReady()
-
-    else:  # else toggle switch is OFF
-        blinkcheck(blink_speed)
-        blinkyNew()
-        # blinky()
-
-        # /// NOTE
-        # the following code causes a memory error...
-
-        # if buttonpress():
-        #     color_name = next(color_list)
-        #     print(color_name)
-        # else:
-        #     pass        
-
+#  UPDATE/REFRESH the loop
+    # Theoretically, all of the operations below will prime the code for the next check
+    # keep "side effects" out of return operators
+    prev_toggle_state = toggle.value  # updates the toggle state for next pass
     time.sleep(0.01)
+
