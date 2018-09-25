@@ -1,7 +1,33 @@
 # This is the basic starting functionality of the mystery box prototype
 
 
-# //// SETUP !!!
+# Outline of Sections:
+#
+# IMPORTS
+#   import your packages
+#
+# SETUP THE BOARD
+#   initialize the hardware stuff (only assign values that aren't going to change later.)
+#    
+# CONSTANT VARIABLES
+#   a constant is a value that will never change, but you need to refer to it from multiple places
+#
+# PURE FUNCTIONS
+#   functions that don't have side-effects, they simply compute the answers to your questions
+#
+# COMMAND FUNCTIONS
+#   functions that do have side-effects, e.g. changing a pixel color
+#
+# STATE VARIABLES
+#   the values that change over time and describe the current state of your app, e.g. blinky_color
+#
+# MAIN LOOP
+#   the boss logic. Based on your current state, invoke certain command functions and update the state.
+
+
+
+### INPORTS
+
 import time
 import random
 
@@ -13,28 +39,26 @@ from adafruit_circuitplayground.express import cpx
 
 
 
-# ////  DECLARE VARIABLES !!!
+### SETUP THE BOARD (use prefix _underscore naming pattern)
 
-# -- Set initial CPX pixel brightness
-cpx.pixels.brightness = .01
+# the Circuit Python Express board
+_cpx = cpx
 
-# -- setup the external neopixel 
-pixpin = board.A3
-numpix = 1
-neobright = 0.1
-neo = neopixel.NeoPixel(pixpin, numpix, brightness=neobright)
+# the external Neopixel 
+_neo = neopixel.NeoPixel(board.A3, 1, brightness=0.1)
 
-# -- the toggle switch
-toggle = DigitalInOut(board.A6)
-toggle.direction = Direction.INPUT
+# the toggle switch
+_toggle_switch = DigitalInOut(board.A6)
+_toggle_switch.direction = Direction.INPUT
 
-prev_toggle_state = toggle.value 
+# the silver button
+_silver_button = DigitalInOut(board.A7)
+_silver_button.direction = Direction.INPUT
+_silver_button.pull = Pull.UP
 
-# -- the silver button
-button = DigitalInOut(board.A7)
-button.direction = Direction.INPUT
-button.pull = Pull.UP
-button_state = None
+
+
+### CONSTANT VARIABLES (use ALL CAPS naming pattern)
 
 # -- Color Variables
 RED = (255, 0, 0)
@@ -43,7 +67,7 @@ BLUE = (0, 0, 255)
 BLACK = (0, 0, 0)
 
 # dictionary of colors...
-color_swatches = {
+COLOR_SWATCHES = {
     "red": (255, 0, 0),  # red
     "orange": (255, 40, 0),  # orange
     "yellow": (255, 150, 0),  # yellow
@@ -53,17 +77,7 @@ color_swatches = {
     # "black": (0, 0, 0),  # off
 }
 
-# this function is out of order cause of this wacky generator
-def cycle_sequence(seq):  # cycles through whatever sequence... 
-    while True:
-        for elem in seq:
-            yield elem
-
-# this used to be a...
-# list of colors for use with above dict...
-# but now its a 'generator' I believe
-# it is being iterated through to select the key value pair from the dict
-color_list = cycle_sequence([
+COLOR_NAMES = [
 	"red",
 	"orange",
     "yellow",
@@ -71,325 +85,133 @@ color_list = cycle_sequence([
     "blue",
     "purple",
     # "black",
-])
+]
 
-# I'd like to know a way to select the start position of a generator
-# this will ALWAYS start on red... 
-color_name = next(color_list)  
-active_color = None
-
-# -- range of random blinkies
-randmin = 3
-randmax = 10
-
-# -- used to change values elsewhere based on the blinky function finishing
-reset = 0
-oldreset = None
-
-# -- global vars for led blink timing
-blink_speed = 0.5
-initial_time = time.monotonic()  # defines starting time for blinkcheck()
-blinky_time = time.monotonic()  # set a time comparator for blinky()
-
-# -- global vars for CPX pixel blinking
-blinkyNew_time = time.monotonic()  # set a time comparator for blinkyNew()
-blinklist_index = 0  # current blink index
-random_pause = random.uniform(.05, .5)  # current pause duration
+# how long does the led pause between blinks (when not random)
+LED_BLINK_DURATION_STANDARD = 0.25
 
 
-# ////  FUNCTIONS !!!
-def buttonpress():  # returns inverse of button press
-    return not button.value
-    # ... this is just to fold the code in SublimeText
 
-def presscheck():  # checks and sets the state of the button
-    global button_state
-    if not buttonpress() and button_state is None:
-        button_state = "pressed"
-    if buttonpress() and button_state == "pressed":
-        print()
-        print("Button Pressed")
-        # randomtime()
-        # neochange()  # change solo neo pix when loop can be broken!
-        button_state = None   
+### PURE FUNCTIONS
 
-def togglecheck():  # checks and sets the state of the toggle
-    # print("toggle checked")
-    global prev_toggle_state
-    global color_name
+def currentTime():
+    return time.monotonic()
 
-    # if toggle.value != prev_toggle_state:
-    #     # return True
-    #     print("toggle value :", toggle.value)
-    #     if toggle.value:
-    #         print("ON")
-    #         color_name = next(color_list)  # changes color of blinkers when toggle flips
-    #     else:
-    #         print("OFF")
-    #         clearPixels()
-    #         ''' 
-    #             NOTE!!!
-    #             I'd like this to not be in the toggle check function
-    #             but have it called elsewhere, but i cant seem to make it happen
-    #         '''
-    #     # return toggle.value  # this gives unexpected behavior
-    # else:
-    # 	pass
-    # prev_toggle_state = toggle.value
-
-    return prev_toggle_state != toggle.value
-
-def blinklist():  # generate a pixel order list to be used as a nonblocking alternative to blinky()
-    pixelcount = random.randint(randmin, randmax) # pick a num of pixels to fuck with
-    pix_order_list = []
-
-    for x in range(pixelcount):
-    	pix_order_list.append(random.randint(0, 9))
-    	# pixloc = random.randint(0, 9)
-    #  print(pix_order_list)
-    return pix_order_list   # return the value of the list!
-
-blink_list = blinklist()
-
-def blinkyNew():  # WIP for the non blocking blinker generator... 
-    # print("\n     blinkyNew() CALLED")
-    global active_color
-    global color_name
-
-    global blinkyNew_time
-    global random_pause
-
-    global blink_list
-    global blinklist_index
-
-    active_color = color_swatches[color_name]
-
-    # PSEUDO CODE NOTES!!!
-        # if time to do something
-            # toggle appropriate light
-            # increment current blink index
-            # change pause to new random duration
-            # if were at the end of list (remember index starts at 0, check length, etc)
-                # generate new list
-                # set blink index to 0
-
-    if current_time - blinkyNew_time > random_pause:
-        blinkyNew_time = current_time 
-
-        if cpx.pixels[blink_list[blinklist_index]] == active_color:  # If the color is the active color
-            cpx.pixels[blink_list[blinklist_index]] = BLACK  # set it black
-            color = "OFF"
-        else:
-            cpx.pixels[blink_list[blinklist_index]] = active_color  # otherwise set it to the active color
-            color = color_name 
-
-        print(
-        # "blink_list \n"
-        "index:", blinklist_index, "/", 
-        "value:", blink_list[blinklist_index], "/", 
-        "color:", color, "/",
-        "pause:", random_pause
-        )
-
-        blinklist_index += 1
-
-        random_pause = random.uniform(.05, .5)  # current pause duration
-
-        if blinklist_index >= len(blink_list):  # if we're at the end of the list
-            blink_list = blinklist()  # generate a new list
-
-            print()
-            print("blink_list:", blink_list)
-
-            blinklist_index = 0  # reset the index
-
-            neochange()  # change the solo neopixel
-            clearPixels()  # clear the CPX pixels
-
-    else:
-        pass
-
-def blinky():  # blinks the cpx pixels randomly
-    print("\n    blinky() CALLED")
-    print("start loop actual time:", time.monotonic())  # current_time)
-
-    # global keyword allows access to global variables
-    global blinky_time
-    global active_color
-    global color_name
-    global reset
-
-    # reset pixels and set random brightness
-    cpx.pixels.fill(BLACK)  # clear any pixel color
-    Bright = random.uniform(.001, .2)
-    cpx.pixels.brightness = Bright
-
-    # this is now calling a generator
-    # color_name = next(color_list)  # changes color after each blinky loop
-    active_color = color_swatches[color_name]
-     
-    pixelcount = random.randint(randmin, randmax) # pick a num of pixels to fuck with
-    count = 0  # for counting through the iteration loop (mostly for debugging)
-
-    for x in range(pixelcount):  # range(50):  # Loop between a random number of times
-        pixloc = random.randint(0, 9)  # Choose a random neopixel (pixloc var)
-        random_pause = random.uniform(.05, .5)  # for trying to build non blocking pause
-    	loop_time = time.monotonic()
-
-        # if loop_time - blinky_time > random_pause:
-        # 	blinky_time = loop_time
-        # 	print("pause:", random_pause)
-	    	# this time check within the loop is basically never going to fire, or only fire once...
-	    	# I need to figure out another solution...
-
-        if cpx.pixels[pixloc] == active_color:  # If the color is the active color
-            cpx.pixels[pixloc] = BLACK  # set it black
-            color = "OFF"
-        else:
-            cpx.pixels[pixloc] = active_color  # otherwise set it to the active color
-            color = color_name  
-
-        time.sleep(random.uniform(.05, .5))  # short random pause
-
-        print(
-        "count:", count, "/", 
-        "loc:", pixloc, "/", 
-        "color:", color, "/", 
-        "looptime:", loop_time
-        )
-
-        # print("random pause:", random_pause)
-        # print("blinky time:", blinky_time)
-        # print("range:", count, "current time", current_time)
-
-        count = count + 1  # increment count
-    
-    print("-- end loop actual time:", time.monotonic())
-
-    random_pause = random.uniform(.05, .5)  # for trying to build non blocking pause
-    time.sleep(random_pause)  # short random pause
-    print("-- post pause:", random_pause)
-
-    cpx.pixels.brightness = 0  # set brightness to 0
-    reset = reset + 1
-
-    print("-- blinky times reset :", reset, "\n")
+def generateBlinkyDuration():
+    # TODO
     pass
- 
-def neochange():  # sets random color and brightness for solo neopixel
-    neo.brightness = random.random()
-    rCol = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
-    neo.fill(rCol)
 
-def clearPixels():  # reset CPX pixels to OFF and set random brightness
-    cpx.pixels.fill(BLACK)  # clear any pixel color
-    Bright = random.uniform(.001, .2)
-    cpx.pixels.brightness = Bright
- 
-def inputReady():  # resets CPX pixels to standard green
-    cpx.pixels.brightness = .01
-    cpx.pixels.fill(GREEN)
-    neo.brightness = .1
-    neo.fill(GREEN)
-
-def redflare():  # randomly changes brightness of all pixels
-    Bright = random.random()
-    print("Bright =", Bright)
-    cpx.pixels.fill(RED)
-    cpx.pixels.brightness = Bright
-    neo.brightness = Bright
-    pass   
-
-def blinkcheck(speed):  # non blocking LED blinky
-    # print("blinkcheck FIRED!")
-    global initial_time
-    # current_time = time.monotonic()  # now set in main loop
-    if current_time - initial_time > speed:
-        initial_time = current_time
-        cpx.red_led = not cpx.red_led
-
-neochange()
+def generateBlinkyPixelSequence():
+    # TODO
+    pass
 
 
+### COMMAND FUNCTIONS (use prefix "do" naming pattern)
+
+def doRedflare():  # randomly changes brightness of all pixels
+    brightness = random.random()
+    print("brightness =", brightness)
+    _cpx.pixels.fill(RED)
+    _cpx.pixels.brightness = brightness
+    _neo.brightness = brightness
+
+def doAllPixelsOff():
+    _cpx.pixels.brightness = 0
+    _cpx.pixels.fill(BLACK) 
+
+def doAllPixelsSetToColor(color):
+    _cpx.pixels.brightness = .01
+    _cpx.pixels.fill(color)
+
+def doSoloNeoSetToColor(color):
+    # TODO
+    pass
+
+def doBlinkLed():
+    # TODO
+    pass
 
 
-# /// NEW setup declarations
-def doPixelsOff():
-    cpx.pixels.brightness = 0
-    cpx.pixels.fill(BLACK) 
+### STATE VARIABLES (standard python underscore separator)
 
-def doModeSetup():
-    if mode == "green":
-        cpx.pixels.brightness = .01
-        cpx.pixels.fill(GREEN)
-    else:
-        doPixelsOff()
-
-mode = "green" if toggle.value else "blinky"
-doModeSetup()
+mode = None # start at None so that the main loop does initial setup
+prev_led_blink_time = currentTime()
+led_blink_duration = generateLedBlinkDuration()
+prev_blinky_blink_time = currentTime()
+blinky_duration = generateBlinkyDuration()
+blinky_sequence_index = 0
+blinky_color_index = 0
+solo_neo_color = BLUE # fuck it why not blue
 
 
-# //// DO STUFF !!!
+### MAIN LOOP
+
 while True:
-    # print(mode)
 
-    # UPDATES
-    current_time = time.monotonic()
-
+    # decide current mode
     previous_mode = mode
-    mode = "green" if toggle.value else "blinky"
-    mode_has_changed = previous_mode != mode
+    mode = "GREEN" if _toggle_switch.value else "BLINKY"
 
+    # if we just switched to a new mode, do some initial setup
+    if mode != previous_mode and mode == "GREEN":
+        # setup GREEN mode
+        doAllPixelsColor(GREEN)
+        led_blink_duration = LED_BLINK_DURATION_STANDARD
+        doSoloNeoSetToColor(GREEN)
+    elif mode != previous_mode and mode == "BLINKY":
+        # setup BLINKY mode
+        prev_blinky_blink_time = currentTime()
+        blinky_duration = generateBlinkyDuration()
+        blinky_sequence_index = 0
+        blinky_color_index = (blinky_color_index + 1) % len(COLOR_SWATCHES)
+        doAllPixelsOff()
+        solo_neo_color = COLOR_SWATCHES[ COLOR_NAMES[solo_neo_color_index] ]
+        doSoloNeoSetToColor(solo_neo_color)
+    
 
-    # COMMANDS
-    if mode_has_changed:
-        print(mode)
-        doModeSetup()
+    # continuous updates and commands for GREEN
+    if mode == "GREEN":
+        if _silver_button.value:
+            # red flare
+            doRedflare()
+        
+        # LED blink
+        time_since_prev_led_blink = currentTime() - prev_led_blink_time
+        if time_since_prev_led_blink >= led_blink_duration:
+            doBlinkLed()
+            prev_led_blink_time = currentTime()
+            led_blink_duration = generateLedBlinkDuration()
+
+    # continuous updates and commands for BLINKY
+    elif mode == "BLINKY":
+        # should we blink right now?
+        time_since_prev_blink = currentTime() - prev_blinky_blink_time
+        should_blink_now = time_since_prev_blink >= blinky_duration
+        if should_blink_now:
+            # blink the next pixel
+            pixel = blinky_pixel_sequence[blinky_sequence_index]
+            color_name = COLOR_NAMES[blinky_color_index]
+            color = COLOR_SWATCHES[color_name]
+            doBlinkPixel(pixel, color)
+            # update state
+            prev_blinky_blink_time = currentTime()
+            blinky_duration = generateBlinkyDuration()
+            blinky_sequence_index = blinky_sequence_index + 1
+            if blinky_sequence_index >= len(blinky_pixel_sequence):
+                # we have reached the end of the sequence, so start over and create a new sequence
+                blinky_sequence_index = 0
+                blinky_pixel_sequence = generateBlinkyPixelSequence()
+                solo_neo_color_index = (solo_neo_color_index + 1) % len(COLOR_NAMES)
+
+        # should the LED blink right now?
+        time_since_prev_led_blink = currentTime() - prev_led_blink_time
+        if time_since_prev_led_blink >= led_blink_duration:
+            # blink it
+            doBlinkLed()
+            # update state
+            prev_led_blink_time = currentTime()
+
 
     time.sleep(0.01)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    # /// OLD LOOP FOR REFERENCE
-    # current_time = time.monotonic()
-
-    # if togglecheck():
-    #     if toggle.value:
-    #         # change the color
-    #         print("it turned on")
-    #     else:
-    #         print("it turned OFF")
-    #         # clear pixels
-
-
-    # if toggle.value:  # if toggle switch is ON
-    #     blinkcheck(random.uniform(.01, 1)) 
-    #     if buttonpress():
-    #         cpx.start_tone(random.randint(250,700))
-    #         redflare()
-    #         pass
-    #     else:
-    #         cpx.stop_tone()
-    #         inputReady()
-    # else:  # else toggle switch is OFF
-    #     blinkcheck(blink_speed)
-    #     blinkyNew()
-
-    # prev_toggle_state = toggle.value  # updates the toggle state for next pass
-    # time.sleep(0.01)
