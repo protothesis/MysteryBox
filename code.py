@@ -44,42 +44,6 @@ GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 BLACK = (0, 0, 0)
 
-# dictionary of colors...
-COLOR_SWATCHES = {
-    "red": (255, 0, 0),  # red
-    "orange": (255, 40, 0),  # orange
-    "yellow": (255, 150, 0),  # yellow
-    "green": (0, 255, 0),  # green
-    "blue": (0, 0, 255),  # blue
-    "purple": (180, 0, 255),  # purple
-    # "black": (0, 0, 0),  # off
-}
-
-# this function is out of order cause of this wacky generator
-def cycle_sequence(seq):  # cycles through whatever sequence... 
-    while True:
-        for elem in seq:
-            yield elem
-
-# this used to be a...
-# list of colors for use with above dict...
-# but now its a 'generator' I believe
-# it is being iterated through to select the key value pair from the dict
-COLOR_LIST = cycle_sequence([
-	"red",
-	"orange",
-    "yellow",
-    "green",
-    "blue",
-    "purple",
-    # "black",
-])
-
-# I'd like to know a way to select the start position of a generator
-# this will ALWAYS start on red... 
-COLOR_NAME= next(COLOR_LIST)  
-ACTIVE_COLOR = None
-
 
 
 
