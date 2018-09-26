@@ -1,5 +1,5 @@
-# This is the basic starting functionality of the mystery box prototype
-# this is a commit test
+# Code for the MysteryBox prototype
+
 
 ### //// IMPORTS
 import time
@@ -17,7 +17,7 @@ from adafruit_circuitplayground.express import cpx
 ### //// SETUP THE BOARD
 
 # -- Set initial CPX pixel brightness
-cpx.pixels.brightness = .01
+# cpx.pixels.brightness = .01  # this seems to be no longer needed
 
 # -- setup the external neopixel 
 neo = neopixel.NeoPixel(board.A3, 1, brightness = 0.1)
@@ -25,13 +25,11 @@ neo = neopixel.NeoPixel(board.A3, 1, brightness = 0.1)
 # -- the toggle switch
 toggle = DigitalInOut(board.A6)
 toggle.direction = Direction.INPUT
-prev_toggle_state = toggle.value  # this maybe needs to be moved?
 
 # -- the silver button
 button = DigitalInOut(board.A7)
 button.direction = Direction.INPUT
 button.pull = Pull.UP
-button_state = None  # this needs to be moved???
 
 
 
@@ -50,16 +48,20 @@ BLACK = (0, 0, 0)
 ### //// PURE FUNCTIONS  (descriptive camel case)
 
 def currentTime():  # returns the current time
-	# so this will collapse Sublime Test
+	#
 	return time.monotonic()
 
 def buttonIsDown():  # returns intuitive button press value
+	#
     return not button.value
-    # ... this is just to fold the code in SublimeText
-
+    
 def isItTime(previous_time, pause_duration):  # returns if its time to do a thing
 	#
 	return currentTime() - previous_time > pause_duration
+
+def doGenerateRandomValue():  # returns a float val between 0 and 1
+	#
+	return random.random()
 
 
 
@@ -86,10 +88,14 @@ mode = None
 pause_duration_LED = .5
 previous_time_toggle_LED = currentTime()
 
+# new experimental variables... need to be approved by Jesse
+random_value = doGenerateRandomValue()
+current_button_state = None
 
 
 
-### /// UPDATE HELPERS
+
+### //// UPDATE HELPERS
 ''' 
 	updates do several things
 	COMMANDS and UPDATES
@@ -117,15 +123,35 @@ while True:
 	mode = "green" if toggle.value else "blinky"
 	mode_has_changed = previous_mode != mode
 
+	# button state change check
+	old_button_state = current_button_state
+	current_button_state = buttonIsDown()
+	button_state_has_changed = old_button_state != current_button_state
+
 
 	# COMMANDS SETUP
 	# if we just switched to a new mode, do some initial setup
 	if mode_has_changed and mode == "green":  # green setup
-		print(mode)
+		print("Mode :", mode)
 		doPixelsColor(GREEN)
+		neo.fill(GREEN)
+
 	elif mode_has_changed and mode == "blinky":  # blinky setup
-		print(mode)
+		print("Mode :", mode)
 		doPixelsOff()
+		neo.fill(BLACK)
+
+		cpx.stop_tone()
+
+
+	# if the button is pressed or released, do something
+	if button_state_has_changed and buttonIsDown():
+		print("button PRESSED")
+		# cpx.start_tone(random.randint(250,700))
+	elif button_state_has_changed and not buttonIsDown():
+		print("button RELEASED")
+		# cpx.stop_tone()
+
 
 
 	# CONTINUOUS UPDATES
@@ -133,9 +159,27 @@ while True:
 		updateIfItIsTimeToggleLED()
 
 		if buttonIsDown():
-			doPixelsColor(RED, brightness = random.random())  # Flares the Ring RED
+			# start the tone if the button state has changed
+			# this feels clumsy here, check in with Jesse
+			if button_state_has_changed:  
+				cpx.start_tone(random.randint(250,700))
+				print("sound on")
+
+			# flares CPX ring and solo Neo red at a random brightness
+			random_value = doGenerateRandomValue()
+			doPixelsColor(RED, brightness = random_value)
+			neo.fill(RED)
+			neo.brightness = random_value
+
 		else:
+			if button_state_has_changed:
+				cpx.stop_tone()
+				print("sound off")
+
+			# resets CPX ring and solo Neo to green at low brightness
 			doPixelsColor(GREEN)
+			neo.fill(GREEN)
+			neo.brightness = .01
 
 	elif mode == "blinky":
 		updateIfItIsTimeToggleLED(new_pause_duration = random.uniform(.005,1))
