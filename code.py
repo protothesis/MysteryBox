@@ -80,6 +80,15 @@ def doToggleLED():  # toggles the on board LED
 	#
 	cpx.red_led = not cpx.red_led
 
+def doTogglePixel(index):
+	#
+	if cpx.pixels[index] == BLACK:
+		print("pixel is black")
+		cpx.pixels[index] = GREEN
+	else:
+		cpx.pixels[index] = BLACK
+	print("Pixel %d Toggled" % index)
+
 
 
 
@@ -88,8 +97,11 @@ mode = None
 pause_duration_LED = .5
 previous_time_toggle_LED = currentTime()
 
- 
-
+# blinky variables
+previous_time_blink = currentTime()
+pause_duration_blink = random.uniform(.05,.5)
+blink_count = random.randint(3,20)
+blinks_per_cycle = 0
 
 # new experimental variables... need to be approved by Jesse
 random_value = doGenerateRandomValue()
@@ -134,6 +146,7 @@ while True:
 	redflare_has_changed = old_redflare != redflare
 
 
+
 	# COMMANDS SETUP
 	# if we just switched to a new mode, do some initial setup
 	if mode_has_changed and mode == "green":  # green setup
@@ -143,9 +156,15 @@ while True:
 
 	elif mode_has_changed and mode == "blinky":  # blinky setup
 		print("Mode :", mode)
-		doPixelsOff()
-		neo.fill(BLACK)
 
+		# "blinky" setup
+		# TODO - pick new color for CPX ring for duration of mode
+		blinks_per_cycle = random.randint(3,20)	 # set random - blinks_per_cycle
+		blink_count = 0
+		doPixelsColor(BLACK)
+
+		# incomplete features
+		neo.fill(BLACK)
 		cpx.stop_tone()
 
 
@@ -181,6 +200,23 @@ while True:
 	elif mode == "blinky":
 		updateIfItIsTimeToggleLED(new_pause_duration = random.uniform(.005,1))
 
+		if isItTime(previous_time_blink, pause_duration_blink):  # random blink_duration
+			# print("previous time:", previous_time_blink, "pause duration:", pause_duration_blink)
+
+			pixel_index = random.randint(0, 9)  # pick a random pixel
+			doTogglePixel(pixel_index)  # and toggle it
+
+			pause_duration_blink = random.uniform(.05,.5)  # pick new blink_duration
+			previous_time_blink = currentTime()
+			blink_count += 1  # increment - blink_count
+			
+			if blink_count >= blinks_per_cycle:  # if we should refresh
+			 	blinks_per_cycle = random.randint(3,20)  # set new random - blinks_per_cycle
+			 	blink_count = 0
+				doPixelsColor(BLACK)
+				# set random solo neopixel color
+
+				print("New Blink Cycle Number: %d \n" % blinks_per_cycle)
 
 
 	time.sleep(0.01)
