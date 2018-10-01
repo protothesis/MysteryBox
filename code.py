@@ -88,9 +88,12 @@ mode = None
 pause_duration_LED = .5
 previous_time_toggle_LED = currentTime()
 
+ 
+
+
 # new experimental variables... need to be approved by Jesse
 random_value = doGenerateRandomValue()
-current_button_state = None
+redflare = None
 
 
 
@@ -123,10 +126,12 @@ while True:
 	mode = "green" if toggle.value else "blinky"
 	mode_has_changed = previous_mode != mode
 
-	# button state change check
-	old_button_state = current_button_state
-	current_button_state = buttonIsDown()
-	button_state_has_changed = old_button_state != current_button_state
+	# redflare state check
+	# possible 'edge case bug thing' - ask jesse
+	# if mode == "green": 
+	old_redflare = redflare
+	redflare = buttonIsDown()
+	redflare_has_changed = old_redflare != redflare
 
 
 	# COMMANDS SETUP
@@ -144,42 +149,34 @@ while True:
 		cpx.stop_tone()
 
 
-	# if the button is pressed or released, do something
-	if button_state_has_changed and buttonIsDown():
-		print("button PRESSED")
-		# cpx.start_tone(random.randint(250,700))
-	elif button_state_has_changed and not buttonIsDown():
-		print("button RELEASED")
-		# cpx.stop_tone()
-
-
-
 	# CONTINUOUS UPDATES
 	if mode == "green":
 		updateIfItIsTimeToggleLED()
 
-		if buttonIsDown():
-			# start the tone if the button state has changed
-			# this feels clumsy here, check in with Jesse
-			if button_state_has_changed:  
-				cpx.start_tone(random.randint(250,700))
-				print("sound on")
+		# redflare setup
+		if redflare_has_changed and redflare:
+			cpx.start_tone(random.randint(250,700))
+			# print("entering redflare")
+			# print("sound on")
+		elif redflare_has_changed and not redflare:
+			cpx.stop_tone()
+			# print("leaving redflare")
+			# print("sound off")
 
+			# resets CPX ring and solo Neo to green at low brightness
+			doPixelsColor(GREEN)
+			neo.fill(GREEN)
+			neo.brightness = .01
+
+		# redflare continuous
+		if redflare:  # buttonIsDown():
 			# flares CPX ring and solo Neo red at a random brightness
 			random_value = doGenerateRandomValue()
 			doPixelsColor(RED, brightness = random_value)
 			neo.fill(RED)
 			neo.brightness = random_value
 
-		else:
-			if button_state_has_changed:
-				cpx.stop_tone()
-				print("sound off")
 
-			# resets CPX ring and solo Neo to green at low brightness
-			doPixelsColor(GREEN)
-			neo.fill(GREEN)
-			neo.brightness = .01
 
 	elif mode == "blinky":
 		updateIfItIsTimeToggleLED(new_pause_duration = random.uniform(.005,1))
