@@ -41,8 +41,15 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 BLACK = (0, 0, 0)
+# add color values
 
-
+COLORS = [
+	RED,
+	GREEN,
+	BLUE
+	# add the rest of the above values
+	# OR just add in a tuple for the colors with a comment 
+]
 
 
 ### //// PURE FUNCTIONS  (descriptive camel case)
@@ -80,14 +87,12 @@ def doToggleLED():  # toggles the on board LED
 	#
 	cpx.red_led = not cpx.red_led
 
-def doTogglePixel(index):
-	#
+def doTogglePixel(index, color):
 	if cpx.pixels[index] == BLACK:
-		print("pixel is black")
-		cpx.pixels[index] = GREEN
+		cpx.pixels[index] = color
 	else:
 		cpx.pixels[index] = BLACK
-	print("Pixel %d Toggled" % index)
+	# print("Pixel %d Toggled" % index)
 
 
 
@@ -97,15 +102,17 @@ mode = None
 pause_duration_LED = .5
 previous_time_toggle_LED = currentTime()
 
+redflare = None
+
 # blinky variables
 previous_time_blink = currentTime()
 pause_duration_blink = random.uniform(.05,.5)
 blink_count = random.randint(3,20)
 blinks_per_cycle = 0
+blinky_color = BLUE
 
 # new experimental variables... need to be approved by Jesse
 random_value = doGenerateRandomValue()
-redflare = None
 
 
 
@@ -126,6 +133,20 @@ def updateIfItIsTimeToggleLED(new_pause_duration = .25):  # toggles the onboard 
 		previous_time_toggle_LED = currentTime()
 		pause_duration_LED = new_pause_duration
 
+def updateBlinkyCycleSetup():
+	global blinks_per_cycle
+	global blink_count
+
+	blinks_per_cycle = random.randint(3,20)
+	blink_count = 0
+	doPixelsColor(BLACK)
+
+	# set random solo neopixel color
+	neo_color = (random.randint(0,255),random.randint(0,255),random.randint(0,255))
+	neo.fill(neo_color)
+
+	print("New Blink Cycle Number: %d \n" % blinks_per_cycle)
+
 
 
 
@@ -140,10 +161,10 @@ while True:
 
 	# redflare state check
 	# possible 'edge case bug thing' - ask jesse
-	# if mode == "green": 
 	old_redflare = redflare
 	redflare = buttonIsDown()
 	redflare_has_changed = old_redflare != redflare
+
 
 
 
@@ -157,15 +178,12 @@ while True:
 	elif mode_has_changed and mode == "blinky":  # blinky setup
 		print("Mode :", mode)
 
-		# "blinky" setup
-		# TODO - pick new color for CPX ring for duration of mode
-		blinks_per_cycle = random.randint(3,20)	 # set random - blinks_per_cycle
-		blink_count = 0
-		doPixelsColor(BLACK)
+		blinky_color = random.choice(COLORS)
+		updateBlinkyCycleSetup()
 
-		# incomplete features
-		neo.fill(BLACK)
 		cpx.stop_tone()
+
+
 
 
 	# CONTINUOUS UPDATES
@@ -200,23 +218,20 @@ while True:
 	elif mode == "blinky":
 		updateIfItIsTimeToggleLED(new_pause_duration = random.uniform(.005,1))
 
+		# cycle setup
+		if blink_count >= blinks_per_cycle:  # if we should refresh
+			updateBlinkyCycleSetup()
+
+		# continuous
 		if isItTime(previous_time_blink, pause_duration_blink):  # random blink_duration
 			# print("previous time:", previous_time_blink, "pause duration:", pause_duration_blink)
 
 			pixel_index = random.randint(0, 9)  # pick a random pixel
-			doTogglePixel(pixel_index)  # and toggle it
+			doTogglePixel(pixel_index, blinky_color)  # and toggle it
 
 			pause_duration_blink = random.uniform(.05,.5)  # pick new blink_duration
 			previous_time_blink = currentTime()
 			blink_count += 1  # increment - blink_count
 			
-			if blink_count >= blinks_per_cycle:  # if we should refresh
-			 	blinks_per_cycle = random.randint(3,20)  # set new random - blinks_per_cycle
-			 	blink_count = 0
-				doPixelsColor(BLACK)
-				# set random solo neopixel color
-
-				print("New Blink Cycle Number: %d \n" % blinks_per_cycle)
-
-
+			
 	time.sleep(0.01)
