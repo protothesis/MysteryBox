@@ -65,7 +65,7 @@ def isItTime(previous_time, pause_duration):  # returns if its time to do a thin
 	#
 	return currentTime() - previous_time > pause_duration
 
-def doGenerateRandomValue():  # returns a float val between 0 and 1
+def generateRandomValue():  # returns a float val between 0 and 1
 	#
 	return random.random()
 
@@ -81,12 +81,31 @@ def doToggleLED():  # toggles the on board LED
 	#
 	cpx.red_led = not cpx.red_led
 
-def doTogglePixel(index, color):
+def doTogglePixel(index, color):  # 'toggles' an individual CPX pixel
 	if cpx.pixels[index] == BLACK:
 		cpx.pixels[index] = color
 	else:
 		cpx.pixels[index] = BLACK
 	# print("Pixel %d Toggled" % index)
+
+def doPrintToSerial():  # prints a bunch of state information to serial for TouchDesigner
+	'''
+		There are occasional instances where there are redundant messages printed.
+		This shouldnt cause any issues in Touch Designer...
+		but I wonder or worry that its a symptom of some inefficiency or problem in the code
+	'''
+	print(
+		"toggle: %d" % toggle.value, 
+		"/",
+		"button: %d" % current_button_state,
+		"/",
+		"flare: %f" % flare_value,
+		"/",
+		# "LED: %d" % cpx.red_led,
+		# "/",
+		"neocolor:", neo[0],
+		)
+	# pass  # to quickly turn off if other testing needs to be done
 
 
 
@@ -97,6 +116,9 @@ pause_duration_LED = .5
 previous_time_toggle_LED = currentTime()
 
 redflare = None
+flare_value = 0  # generateRandomValue()
+
+current_button_state = button.value
 
 # blinky variables
 previous_time_blink = currentTime()
@@ -105,19 +127,12 @@ blink_count = random.randint(3,20)
 blinks_per_cycle = 0
 blinky_color = BLUE
 
-# new experimental variables... need to be approved by Jesse
-random_value = doGenerateRandomValue()
-
 
 
 
 ### //// UPDATE HELPERS
-''' 
-	updates do several things
-	COMMANDS and UPDATES
-	so be careful when writing functions that do both
-	cause there could be some shit going down
-'''
+# updates do BOTH - COMMANDS and UPDATES - use cautiously!!
+
 def updateIfItIsTimeToggleLED(new_pause_duration = .25):  # toggles the onboard LED if its time to do so
 	global previous_time_toggle_LED
 	global pause_duration_LED
@@ -127,10 +142,13 @@ def updateIfItIsTimeToggleLED(new_pause_duration = .25):  # toggles the onboard 
 		previous_time_toggle_LED = currentTime()
 		pause_duration_LED = new_pause_duration
 
-def updateBlinkyCycleSetup():
+		#doPrintToSerial()
+
+def updateBlinkyCycleSetup():  # preps the CPX ring to blink
 	global blinks_per_cycle
 	global blink_count
 
+	# initializes the number of blinks, resets the increment tracker, wipes CPX pixels
 	blinks_per_cycle = random.randint(3,20)
 	blink_count = 0
 	doPixelsColor(BLACK)
@@ -139,7 +157,8 @@ def updateBlinkyCycleSetup():
 	neo_color = (random.randint(0,255),random.randint(0,255),random.randint(0,255))
 	neo.fill(neo_color)
 
-	print("New Blink Cycle Number: %d \n" % blinks_per_cycle)
+	doPrintToSerial()
+	# print("New Blink Cycle Number: %d \n" % blinks_per_cycle)
 
 
 
@@ -159,24 +178,33 @@ while True:
 	redflare = buttonIsDown()
 	redflare_has_changed = old_redflare != redflare
 
+	# a generic button state check
+	old_button_state = current_button_state
+	current_button_state = buttonIsDown()
+	button_state_has_changed = old_button_state != current_button_state
 
 
 
 	# COMMANDS SETUP
 	# if we just switched to a new mode, do some initial setup
+
 	if mode_has_changed and mode == "green":  # green setup
-		print("Mode :", mode)
+		# print("Mode :", mode)
 		doPixelsColor(GREEN)
 		neo.fill(GREEN)
 
 	elif mode_has_changed and mode == "blinky":  # blinky setup
-		print("Mode :", mode)
-
+		#print("Mode :", mode)
 		blinky_color = random.choice(COLORS)
 		updateBlinkyCycleSetup()
-
 		cpx.stop_tone()
 
+	if mode_has_changed:
+		doPrintToSerial()
+
+	# if the button has changed state, do stuff...
+	if button_state_has_changed:
+		doPrintToSerial()
 
 
 
@@ -186,27 +214,30 @@ while True:
 
 		# redflare setup
 		if redflare_has_changed and redflare:
-			cpx.start_tone(random.randint(250,700))
-			# print("entering redflare")
-			# print("sound on")
+			cpx.start_tone(random.randint(250,700))  # sound a random tone
+
 		elif redflare_has_changed and not redflare:
-			cpx.stop_tone()
-			# print("leaving redflare")
-			# print("sound off")
+			cpx.stop_tone()  # kill the tone
 
 			# resets CPX ring and solo Neo to green at low brightness
+			flare_value = 0
 			doPixelsColor(GREEN)
 			neo.fill(GREEN)
 			neo.brightness = .01
 
-		# redflare continuous
-		if redflare:  # buttonIsDown():
-			# flares CPX ring and solo Neo red at a random brightness
-			random_value = doGenerateRandomValue()
-			doPixelsColor(RED, brightness = random_value)
-			neo.fill(RED)
-			neo.brightness = random_value
+			doPrintToSerial()
 
+
+		# redflare continuous
+		if redflare: 
+
+			# flares CPX ring and solo Neo red at a random brightness
+			flare_value = generateRandomValue()
+			doPixelsColor(RED, brightness = flare_value)
+			neo.fill(RED)
+			neo.brightness = flare_value
+
+			doPrintToSerial()
 
 
 	elif mode == "blinky":
