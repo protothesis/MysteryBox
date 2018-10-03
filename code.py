@@ -16,9 +16,6 @@ from adafruit_circuitplayground.express import cpx
 
 ### //// SETUP THE BOARD
 
-# -- Set initial CPX pixel brightness
-# cpx.pixels.brightness = .01  # this seems to be no longer needed
-
 # -- setup the external neopixel 
 neo = neopixel.NeoPixel(board.A3, 1, brightness = 0.1)
 
@@ -41,15 +38,17 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 BLACK = (0, 0, 0)
-# add color values
 
 COLORS = [
-	RED,
-	GREEN,
-	BLUE
-	# add the rest of the above values
-	# OR just add in a tuple for the colors with a comment 
+    (255, 0, 0),    # red
+    (255, 40, 0),   # orange
+    (255, 150, 0),  # yellow
+    (0, 255, 0),    # green
+    (0, 0, 255),    # blue
+    (180, 0, 255),  # purple
 ]
+
+
 
 
 ### //// PURE FUNCTIONS  (descriptive camel case)
@@ -77,11 +76,6 @@ def doGenerateRandomValue():  # returns a float val between 0 and 1
 def doPixelsColor(color, brightness = .01):  # fills the CPX ring a color and brightness
     cpx.pixels.brightness = brightness
     cpx.pixels.fill(color)
-
-def doPixelsOff():  # runs doPixelsColor() to turn all pixels OFF
-	# this function COULD be removed, by passing in (BLACK,0) into doPixelsColor() in the loop...
-	# but we're keeping it here for conceptual ease
-	doPixelsColor(BLACK, 0)
 
 def doToggleLED():  # toggles the on board LED
 	#
